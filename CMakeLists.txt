@@ -68,6 +68,7 @@ endif()
 set(SRCFILES
     src/fmi4c.c
     src/fmi4c_utils.c
+    src/fmi4c_lsdae.c
     3rdparty/ezxml/ezxml.c
     include/fmi4c.h
     include/fmi4c_public.h
@@ -79,6 +80,7 @@ set(SRCFILES
     include/fmi4c_functions_fmi1.h
     include/fmi4c_functions_fmi2.h
     include/fmi4c_functions_fmi3.h
+    include/fmi4c_lsdae.h
     src/fmi4c_private.h)
 
 if(NOT FMI4C_USE_SYSTEM_ZIP)

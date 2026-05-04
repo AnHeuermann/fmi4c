@@ -8,6 +8,7 @@
 #include "fmi4c_functions_fmi1.h"
 #include "fmi4c_functions_fmi2.h"
 #include "fmi4c_functions_fmi3.h"
+#include "fmi4c_lsdae.h"
 
 #include <stdlib.h>
 #ifdef _WIN32
@@ -796,6 +797,25 @@ typedef struct {
 } fmi3Data_t;
 
 
+typedef struct {
+    bool isPresent;
+    const char *fmiLsName;
+    const char *fmiLsVersion;
+    const char *fmiLsDescription;
+
+    int numberOfAlgebraicVariables;
+    fmiLsDaeAlgebraicVariableHandle *algebraicVariables;
+
+    int numberOfContinuousStateDerivatives;
+    fmiLsDaeModelStructureHandle *continuousStateDerivatives;
+
+    int numberOfResiduals;
+    fmiLsDaeModelStructureHandle *residuals;
+
+    int numberOfOutputs;
+    fmiLsDaeModelStructureHandle *outputs;
+} fmiLsDaeData_t;
+
 struct fmuHandle {
     fmiVersion_t version;
     bool unzippedLocationIsTemporary;
@@ -811,6 +831,7 @@ struct fmuHandle {
     fmi1_data_t fmi1;
     fmi2Data_t fmi2;
     fmi3Data_t fmi3;
+    fmiLsDaeData_t lsDae;
 
     void** allocatedPointers;
     int numAllocatedPointers;
@@ -820,6 +841,7 @@ typedef struct fmuHandle fmuHandle;
 bool parseModelDescriptionFmi1(fmuHandle *fmuFile);
 bool parseModelDescriptionFmi2(fmuHandle *fmuFile);
 bool parseModelDescriptionFmi3(fmuHandle *fmuFile);
+void parseFmiLsDaeManifest(fmuHandle *fmu);
 
 bool loadFunctionsFmi1(fmuHandle *contents);
 bool loadFunctionsFmi2(fmuHandle *contents, fmi2Type fmuType);

@@ -4886,6 +4886,7 @@ fmuHandle *fmi4c_loadUnzippedFmu_internal(const char *instanceName, const char *
             free(fmu);
             return NULL;
         }
+        parseFmiLsDaeManifest(fmu);
     }
 
     fmu->unzippedLocationIsTemporary = false;
