@@ -72,12 +72,75 @@ static bool parseLsDaeStructureEntry(fmuHandle *fmu,
     return true;
 }
 
+/* Allow switch between schemes
+ *
+ * New schema:
+ *
+ * <Residual>
+ *   <Formulation .../>
+ * </Residual>
+ *
+ * Old schema:
+ *
+ * <Residual valueReference="..."/>
+ */
+static ezxml_t resolveStructureEntryElement(ezxml_t elem)
+{
+    ezxml_t formulation = ezxml_child(elem, "Formulation");
+
+    if (formulation)
+        return formulation;
+
+    return elem;
+}
+
 /* Count child elements with a given name */
 static int countChildren(ezxml_t parent, const char *name)
 {
     int n = 0;
-    for (ezxml_t e = ezxml_child(parent, name); e; e = e->next) ++n;
+
+    for (ezxml_t e = ezxml_child(parent, name);
+         e;
+         e = ezxml_next(e))
+    {
+        ++n;
+    }
+
     return n;
+}
+
+static void parseModelStructureArray(
+    fmuHandle *fmu,
+    ezxml_t parent,
+    const char *tagName,
+    fmiLsDaeModelStructureHandle **outArray,
+    int *outCount)
+{
+    int n = countChildren(parent, tagName);
+
+    *outCount = n;
+
+    if (n == 0) {
+        *outArray = NULL;
+        return;
+    }
+
+    *outArray =
+        mallocAndRememberPointer(fmu, n * sizeof(fmiLsDaeModelStructureHandle));
+
+    int i = 0;
+
+    for (ezxml_t e = ezxml_child(parent, tagName);
+         e && i < n;
+         e = ezxml_next(e), ++i)
+    {
+        ezxml_t actual = resolveStructureEntryElement(e);
+
+        parseLsDaeStructureEntry(
+            fmu,
+            &(*outArray)[i],
+            actual);
+    }
 }
 
 /* Called from fmi4c_loadUnzippedFmu_internal after parseModelDescriptionFmi3.
@@ -117,7 +180,7 @@ void parseFmiLsDaeManifest(fmuHandle *fmu)
         fmu->lsDae.algebraicVariables =
             mallocAndRememberPointer(fmu, n * sizeof(fmiLsDaeAlgebraicVariableHandle));
         int i = 0;
-        for (ezxml_t e = ezxml_child(algVarsElem, "AlgebraicVariable"); e; e = e->next, ++i)
+        for (ezxml_t e = ezxml_child(algVarsElem, "AlgebraicVariable"); e; e = ezxml_next(e), ++i)
             parseUInt32AttributeEzXml(e, "valueReference",
                                       &fmu->lsDae.algebraicVariables[i].valueReference);
     }
@@ -130,38 +193,28 @@ void parseFmiLsDaeManifest(fmuHandle *fmu)
     }
 
     /* ContinuousStateDerivative */
-    {
-        int n = countChildren(msElem, "ContinuousStateDerivative");
-        fmu->lsDae.numberOfContinuousStateDerivatives = n;
-        fmu->lsDae.continuousStateDerivatives =
-            mallocAndRememberPointer(fmu, n * sizeof(fmiLsDaeModelStructureHandle));
-        int i = 0;
-        for (ezxml_t e = ezxml_child(msElem, "ContinuousStateDerivative"); e; e = e->next, ++i)
-            parseLsDaeStructureEntry(fmu, &fmu->lsDae.continuousStateDerivatives[i], e);
-    }
+    parseModelStructureArray(
+        fmu,
+        msElem,
+        "ContinuousStateDerivative",
+        &fmu->lsDae.continuousStateDerivatives,
+        &fmu->lsDae.numberOfContinuousStateDerivatives);
 
     /* Residual */
-    {
-        int n = countChildren(msElem, "Residual");
-        fmu->lsDae.numberOfResiduals = n;
-        fmu->lsDae.residuals =
-            mallocAndRememberPointer(fmu, n * sizeof(fmiLsDaeModelStructureHandle));
-        int i = 0;
-        for (ezxml_t e = ezxml_child(msElem, "Residual"); e; e = e->next, ++i)
-            parseLsDaeStructureEntry(fmu, &fmu->lsDae.residuals[i], e);
-    }
+    parseModelStructureArray(
+        fmu,
+        msElem,
+        "Residual",
+        &fmu->lsDae.residuals,
+        &fmu->lsDae.numberOfResiduals);
 
     /* Output */
-    {
-        int n = countChildren(msElem, "Output");
-        fmu->lsDae.numberOfOutputs = n;
-        fmu->lsDae.outputs =
-            mallocAndRememberPointer(fmu, n * sizeof(fmiLsDaeModelStructureHandle));
-        int i = 0;
-        for (ezxml_t e = ezxml_child(msElem, "Output"); e; e = e->next, ++i)
-            parseLsDaeStructureEntry(fmu, &fmu->lsDae.outputs[i], e);
-    }
-
+    parseModelStructureArray(
+        fmu,
+        msElem,
+        "Output",
+        &fmu->lsDae.outputs,
+        &fmu->lsDae.numberOfOutputs);
     ezxml_free(root);
 }
 
